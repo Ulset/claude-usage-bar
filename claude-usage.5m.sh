@@ -4,14 +4,14 @@
 # <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
 # <swiftbar.hideDisablePlugin>true</swiftbar.hideDisablePlugin>
 
-CREDS_FILE="$HOME/.claude/.credentials.json"
 API_URL="https://api.anthropic.com/api/oauth/usage"
 BETA_HEADER="oauth-2025-04-20"
 
-# Get OAuth token
+# Get OAuth token from macOS Keychain (Claude Code stores credentials there)
+CREDS_JSON=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null)
 TOKEN=""
-if [ -f "$CREDS_FILE" ] && command -v jq &>/dev/null; then
-    TOKEN=$(jq -r '.claudeAiOauth.accessToken // empty' "$CREDS_FILE" 2>/dev/null)
+if [ -n "$CREDS_JSON" ]; then
+    TOKEN=$(echo "$CREDS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('claudeAiOauth',{}).get('accessToken',''))" 2>/dev/null)
 fi
 
 if [ -z "$TOKEN" ]; then
@@ -106,17 +106,8 @@ if [ -z "$SESSION_PCT" ] || [ "$SESSION_PCT" = "?" ]; then
     exit 0
 fi
 
-# Color based on session usage
-if [ "$SESSION_PCT" -ge 90 ] 2>/dev/null; then
-    COLOR="red"
-elif [ "$SESSION_PCT" -ge 70 ] 2>/dev/null; then
-    COLOR="orange"
-else
-    COLOR="green"
-fi
-
 # Menu bar title
-echo "CC: ${SESSION_PCT}% | sfSymbol=brain.head.profile color=$COLOR"
+echo "CC: ${SESSION_PCT}% | sfSymbol=brain.head.profile"
 echo "---"
 
 # 5-hour session
