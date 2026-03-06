@@ -28,16 +28,29 @@ fi
 TMPFILE=$(mktemp)
 trap "rm -f $TMPFILE" EXIT
 
-curl -s --max-time 10 \
+HTTP_CODE=$(curl -s -o "$TMPFILE" --max-time 10 -w "%{http_code}" \
     -H "Authorization: Bearer $TOKEN" \
     -H "anthropic-beta: $BETA_HEADER" \
     -H "Accept: application/json" \
-    "$API_URL" > "$TMPFILE" 2>/dev/null
+    "$API_URL" 2>/dev/null)
 
-if [ ! -s "$TMPFILE" ]; then
+FETCH_TIME=$(date +"%H:%M:%S")
+
+if [ "$HTTP_CODE" = "000" ] || [ ! -s "$TMPFILE" ]; then
     echo "CC: err | sfSymbol=brain.head.profile"
     echo "---"
-    echo "API request failed | color=red"
+    echo "Network error | color=red"
+    echo "---"
+    echo "Refresh | refresh=true"
+    exit 0
+elif [ "$HTTP_CODE" != "200" ]; then
+    ERR_MSG=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); e=d.get('error',{}); print(e.get('message','') if isinstance(e,dict) else str(e))" "$TMPFILE" 2>/dev/null)
+    echo "CC: err | sfSymbol=brain.head.profile"
+    echo "---"
+    echo "API error (HTTP $HTTP_CODE) | color=red"
+    if [ -n "$ERR_MSG" ]; then
+        echo "$ERR_MSG | size=12"
+    fi
     echo "---"
     echo "Refresh | refresh=true"
     exit 0
@@ -145,3 +158,5 @@ fi
 echo "---"
 echo "Open Usage Dashboard | href=https://claude.ai/settings/usage"
 echo "Refresh | refresh=true"
+echo "---"
+echo "Last fetch: $FETCH_TIME (HTTP $HTTP_CODE) | size=10 color=gray"
