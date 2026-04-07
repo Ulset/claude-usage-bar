@@ -92,16 +92,20 @@ sd = d.get("seven_day") or {}
 sn = d.get("seven_day_sonnet") or {}
 xu = d.get("extra_usage") or {}
 
-session_pct = int(fh["utilization"]) if "utilization" in fh else "?"
+def pct(d, key="utilization"):
+    v = d.get(key)
+    return int(v) if v is not None else "?"
+
+session_pct = pct(fh)
 session_reset = time_until(fh.get("resets_at"))
-weekly_pct = int(sd["utilization"]) if "utilization" in sd else "?"
+weekly_pct = pct(sd)
 weekly_reset = time_until(sd.get("resets_at"))
-sonnet_pct = int(sn["utilization"]) if "utilization" in sn else "?"
+sonnet_pct = pct(sn)
 sonnet_reset = time_until(sn.get("resets_at"))
 extra_enabled = str(xu.get("is_enabled", False)).lower()
-extra_pct = int(xu["utilization"]) if "utilization" in xu else "?"
-extra_used = f'{xu["used_credits"] / 100:.2f}' if "used_credits" in xu else "?"
-extra_limit = f'{int(xu["monthly_limit"] / 100)}' if "monthly_limit" in xu else "?"
+extra_pct = pct(xu)
+extra_used = f'{xu["used_credits"] / 100:.2f}' if xu.get("used_credits") is not None else "?"
+extra_limit = f'{int(xu["monthly_limit"] / 100)}' if xu.get("monthly_limit") is not None else "?"
 
 print(f'{session_pct} {session_reset or "-"} {weekly_pct} {weekly_reset or "-"} {sonnet_pct} {sonnet_reset or "-"} {extra_enabled} {extra_pct} {extra_used} {extra_limit}')
 PYEOF
@@ -110,7 +114,7 @@ PYEOF
 read -r SESSION_PCT SESSION_RESET WEEKLY_PCT WEEKLY_RESET SONNET_PCT SONNET_RESET EXTRA_ENABLED EXTRA_PCT EXTRA_USED EXTRA_LIMIT <<< "$PARSED"
 
 # Fallback if parsing failed
-if [ -z "$SESSION_PCT" ] || [ "$SESSION_PCT" = "?" ]; then
+if [ -z "$SESSION_PCT" ]; then
     echo "CC: ? | sfSymbol=brain.head.profile"
     echo "---"
     echo "Failed to parse API response | color=red"
